@@ -1,0 +1,729 @@
+/* ==========================================
+   🎨 BASE DESIGN STYLE SHEET
+   ========================================== */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 15px;
+    background-color: #ffffff;
+    color: #333333;
+    transition: background 0.3s, color 0.3s;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #007bff;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.header-controls button {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+/* 🤖 Assistant Toast Styling */
+#assistant-toast {
+    display: none; 
+    position: fixed; 
+    top: 20px; 
+    right: 20px; 
+    background: #28a745; 
+    color: #fff; 
+    padding: 12px 20px; 
+    border-radius: 8px; 
+    z-index: 9999; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+    font-weight: bold; 
+    font-size: 14px; 
+    align-items: center; 
+    gap: 10px; 
+    animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+body.dark-mode #assistant-toast { background: #17a2b8; }
+
+.utility-widget {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1200;
+    background: #ffffff;
+    border-top: 1px solid #dfe2e6;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+    max-height: 70px;
+    transition: max-height 0.35s ease, box-shadow 0.35s ease;
+}
+
+.sheet-config {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e6ea;
+}
+
+.sheet-config-input {
+    flex: 1 1 320px;
+    display: grid;
+    gap: 6px;
+}
+
+.sheet-config-input label {
+    font-size: 13px;
+    color: #333;
+    font-weight: 600;
+}
+
+#sheet-url-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ccd0d5;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.sheet-config-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.save-sheet-btn,
+.sync-btn,
+.export-dropdown-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.save-sheet-btn {
+    background: #0d6efd;
+    color: white;
+}
+
+.sheet-source-label {
+    color: #495057;
+    font-size: 13px;
+    background: #e9ecef;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+.utility-widget.expanded {
+    max-height: 420px;
+}
+
+.utility-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+}
+
+.utility-widget-body {
+    display: none;
+    padding: 0 18px 18px;
+}
+
+.utility-widget.expanded .utility-widget-body {
+    display: block;
+}
+
+.utility-widget-body {
+    max-height: calc(90vh - 130px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #007bff #e9ecef;
+}
+.utility-widget-body::-webkit-scrollbar {
+    width: 10px;
+}
+.utility-widget-body::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 10px;
+}
+.utility-widget-body::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 10px;
+}
+
+.utility-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    flex-wrap: wrap;
+}
+
+.utility-widget-header > div {
+    min-width: 0;
+    flex: 1 1 280px;
+}
+
+.utility-widget-toggle {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 15px 15px 100px 15px;
+    background-color: #ffffff;
+    color: #333333;
+    transition: background 0.3s, color 0.3s;
+}
+
+/* 🃏 Contact Card Layout */
+.contact-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.contact-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.photo-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
+}
+
+.contact-photo {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007bff;
+}
+
+/* 🎨 3D Dynamic Name Avatar Styling */
+.avatar-circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white;
+    font-size: 16px;
+    border: 2px solid #ffffff;
+    box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.5), 
+                inset -2px -2px 4px rgba(0, 0, 0, 0.2), 
+                0 3px 5px rgba(0, 0, 0, 0.15);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Status Indicator Dots */
+.status-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+.status-active { background-color: #28a745; }
+.status-leave { background-color: #dc3545; }
+
+.chart-card {
+    background: #ffffff;
+    border: 1px solid #d7e0ed;
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 18px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.chart-card-header strong {
+    font-size: 15px;
+    color: #1f2937;
+}
+
+.chart-card-header p {
+    margin: 2px 0 0;
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.chart-card canvas {
+    width: 100% !important;
+    max-height: 260px;
+}
+
+/* Badges */
+.duty-badge {
+    background: #ffc107;
+    color: #212529;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.star-icon {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    margin-right: 4px;
+    padding: 0;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
+.star-icon:hover { transform: scale(1.2); }
+
+/* Action Links & Buttons */
+.contact-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.action-icon {
+    text-decoration: none;
+    font-size: 20px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 5px;
+}
+
+/* Duty view button styling */
+.duty-btn {
+    font-size: 18px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #fff7e6, #fff1cc);
+    border: 1px solid #ffd54a;
+}
+.duty-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+
+/* 📥 Export Dropdown Menu Mechanics */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #ffffff;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.15);
+    z-index: 1100;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+}
+.dropdown-content a {
+    color: #333333;
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: left;
+}
+.dropdown-content a:hover { background-color: #f1f3f5; color: #007bff; }
+.show-dropdown { display: block !important; }
+
+/* 🏛️ MEETING OVERLAY MODAL STYLES */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    max-width: 550px;
+    width: 90%;
+    box-sizing: border-box;
+    text-align: center;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+body.dark-mode .modal-content {
+    background: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.meeting-draft-area {
+    width: 100%;
+    height: 220px;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    resize: none;
+    background: #fdfdfd;
+    color: #333;
+    box-sizing: border-box;
+    margin-bottom: 5px;
+}
+body.dark-mode .meeting-draft-area {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+/* 🪪 OFFICIAL DIGITAL DUTY PASS ENGINE STYLES */
+.duty-pass-card {
+    width: 290px;
+    height: 420px;
+    border: 3px double #007bff;
+    border-radius: 10px;
+    margin: 0 auto 15px auto;
+    padding: 15px;
+    background: #ffffff !important; 
+    color: #333333 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.duty-pass-header {
+    background: #007bff;
+    color: white !important;
+    padding: 6px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+}
+
+.duty-pass-photo-container {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 12px auto;
+}
+
+.duty-pass-photo {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007bff;
+}
+
+.duty-pass-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white !important;
+    font-size: 28px;
+    border: 2px solid #007bff;
+}
+
+.duty-pass-details {
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 10px;
+}
+
+.duty-pass-details p {
+    margin: 5px 0;
+    border-bottom: 1px dashed #e0e0e0;
+    padding-bottom: 3px;
+    color: #333333 !important;
+}
+
+.duty-pass-footer {
+    position: absolute;
+    bottom: 12px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    border-top: 1px solid #dddddd;
+    padding-top: 8px;
+    color: #555555 !important;
+}
+
+.pass-btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    margin: 5px;
+}
+
+/* Floating Back to top button */
+#back-to-top {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 99;
+}
+
+/* 🎙️ Voice Search Mic Pulse Animation */
+.mic-active {
+    animation: pulse-mic 1.5s infinite;
+    color: #dc3545 !important;
+}
+@keyframes pulse-mic {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ==========================================
+   🌙 DARK MODE EXPERIMENTAL STYLING
+   ========================================== */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+body.dark-mode .slicer-section {
+    background: #1e1e1e;
+    border-color: #333;
+}
+body.dark-mode .analytics-board, body.dark-mode #list-title {
+    color: #ccc;
+}
+body.dark-mode .contact-card {
+    background: #1e1e1e;
+    border-color: #333;
+}
+body.dark-mode .contact-info p { color: #aaa !important; }
+body.dark-mode .contact-info strong { color: #3793ff !important; }
+body.dark-mode .avatar-circle {
+    border-color: #333;
+    box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.2), inset -2px -2px 4px rgba(0, 0, 0, 0.5), 0 3px 5px rgba(0, 0, 0, 0.3);
+}
+body.dark-mode .status-dot { border-color: #1e1e1e; }
+body.dark-mode #bulk-action-bar {
+    background: #1e1e1e;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.4);
+}
+body.dark-mode .dropdown-content { background-color: #2c2c2c; border-color: #444; }
+body.dark-mode .dropdown-content a { color: #ffffff; }
+body.dark-mode .dropdown-content a:hover { background-color: #3a3a3a; color: #17a2b8; }
+body.dark-mode #audit-details-panel { background: #2c2512; color: #ffc107; border-color: #443a1c; }
+
+/* ==========================================
+   📱 CROSS-DEVICE RESPONSIVE LAYOUTS
+   ========================================== */
+@media (max-width: 768px) {
+    .app-header { flex-direction: column; text-align: center; gap: 10px; }
+    .file-section { justify-content: center !important; }
+    .file-section button, .dropdown { width: 100%; }
+    #export-dropdown-btn { width: 100%; }
+    .dropdown-content { width: 100%; position: static; box-shadow: none; margin-top: 2px; }
+    .analytics-board { flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+    .contact-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .contact-actions { width: 100%; justify-content: flex-start; padding-left: 55px; border-top: 1px dashed #ddd; padding-top: 8px; }
+    body.dark-mode .contact-actions { border-top-color: #444; }
+    .utility-widget {
+        max-height: 88vh;
+    }
+    .utility-widget-body {
+        max-height: calc(88vh - 130px);
+    }
+    .utility-widget-body > div {
+        min-width: 0;
+    }
+}
+@media (max-width: 480px) {
+    body { padding: 8px; }
+    #app-title { font-size: 1.1rem !important; }
+    #bulk-action-bar { flex-direction: column; gap: 10px; text-align: center; }
+    #bulk-action-bar div { display: flex; width: 100%; gap: 5px; flex-wrap: wrap; justify-content: center; }
+    .bulk-btn { padding: 8px 10px; font-size: 13px; }
+    #back-to-top { bottom: 210px; }
+}
+/* Additional responsive improvements */
+@media (max-width: 1024px) {
+    .header-controls { flex-wrap: wrap; gap: 8px; }
+    .header-controls > * { flex: 0 1 auto; }
+    .file-section { flex-wrap: wrap; align-items: center; }
+    .slicer-section { padding: 12px; }
+    .view-tabs button { padding: 10px; font-size: 14px; }
+    .contact-card { padding: 10px; }
+    .photo-wrapper { width: 42px; height: 42px; }
+    .contact-photo, .avatar-circle { width: 40px; height: 40px; font-size: 15px; }
+}
+
+@media (max-width: 768px) {
+    .header-controls button, .header-controls select, .header-controls #install-app-btn { width: 100%; }
+    .view-tabs { flex-direction: column; gap: 8px; }
+    .view-tabs button { width: 100%; }
+    .utility-widget { left: 8px; right: 8px; border-radius: 10px; }
+    #ai-parchment-document-canvas { width: 100% !important; padding: 12px !important; box-shadow: none !important; }
+}
+
+@media (max-width: 480px) {
+    .header-controls { width: 100%; justify-content: center; }
+    .header-controls button, .header-controls select, .file-section button, #export-dropdown-btn { width: 100% !important; max-width: none !important; }
+    .analytics-board { text-align: center; }
+    .contact-actions { padding-left: 0; border-top: none; }
+    .duty-pass-card { width: 100%; height: auto; }
+    .utility-widget { max-height: 92vh; }
+    #ai-parchment-document-canvas { min-height: 150mm !important; }
+}
+
+/* Ultra-small screens: tighten spacing and font sizes for <=360px */
+@media (max-width: 360px) {
+    body { padding: 6px; }
+    #app-title { font-size: 1rem; }
+    .tab-btn { padding: 10px; font-size: 14px; }
+    .view-btn { padding: 8px; font-size: 13px; }
+    .install-btn { padding: 6px 10px; font-size: 13px; margin-right: 8px; }
+    .search-bar { padding: 8px 40px 8px 8px; font-size: 13px; }
+    .contact-card { padding: 8px; }
+    .avatar-circle, .contact-photo { width: 36px; height: 36px; font-size: 14px; }
+    .utility-widget { left: 6px; right: 6px; }
+    #back-to-top { right: 12px; bottom: 160px; }
+    .bulk-action-bar { padding: 10px; }
+    .duty-pass-card { padding: 10px; }
+    .meeting-draft-area { height: 160px; }
+}
+
+/* Override specific inline-styled elements for small screens */
+@media (max-width: 768px) {
+    #tab-district, #tab-office { max-width: none !important; width: 48% !important; }
+    #install-app-btn { width: 100% !important; max-width: none !important; }
+    #search-bar { padding-right: 50px !important; }
+}
+@media (max-width: 480px) {
+    #tab-district, #tab-office { width: 100% !important; }
+    .header-controls { gap: 6px; }
+    .utility-widget-header > div { flex: 1 1 100%; }
+}
+
+/* Generic fluid rules */
+img, .contact-photo, .duty-pass-photo { max-width: 100%; height: auto; }
+.dropdown-content { box-sizing: border-box; }
+.file-section, .view-tabs, .utility-widget-header, .utility-widget-body > div { width: 100%; box-sizing: border-box; }
+
+/* Make forms and inputs adapt to container widths */
+input, select, textarea, button { max-width: 100%; box-sizing: border-box; }
+
+/* Utility classes moved from inline styles for cleaner responsive control */
+.header-controls { display: flex; align-items: center; gap: 10px; }
+.install-btn {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+    color: #000; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;
+    border: 2px solid #fff; cursor: pointer; margin-right: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: transform 0.2s;
+}
+.theme-toggle-btn { margin-right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; }
+.lang-select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; outline: none; }
+.file-section { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+.sync-btn { background: #28a745; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+.export-dropdown-btn { background: #007bff; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+.tab-btn { flex: 1; max-width: 200px; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.tab-btn.active { background: #007bff; color: white; }
+.tab-btn.inactive { background: #e0e0e0; color: #333; }
+.slicer-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e9ecef; }
+.view-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+.view-btn { flex: 1; background: #6c757d; color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+.view-btn.primary { background: #007bff; }
+.search-wrapper { position: relative; width: 100%; margin-bottom: 15px; }
+.search-bar { width: 100%; padding: 10px 45px 10px 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+.voice-search-btn { position: absolute; right: 5px; top: 3px; background: transparent; color: #007bff; font-size: 20px; padding: 5px 10px; cursor: pointer; border: none; }
+.dept-slicer { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+.contact-section { margin-bottom: 90px; padding: 0 10px; }
+.contact-list { margin-top: 15px; }
+.select-all-btn { background: #6c757d; color: white; padding: 6px 12px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.ai-drafter-workspace { display: none; margin-bottom: 90px; padding: 0 10px; text-align: left; }
+.bulk-action-bar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); padding: 15px; justify-content: space-between; align-items: center; box-sizing: border-box; z-index: 1000; }
+
+/* --- Add this to the end of your style.css file --- */
+/* PDF/Print Layout Overrides for Cause Notice */
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+#ai-parchment-document-canvas {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 7.5mm 25.4mm 25.4mm 25.4mm !important; /* Top: 0.75cm, L/R: 2.54cm */
+    box-sizing: border-box !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Arial', sans-serif !important;
+    overflow: hidden !important;
+}

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collectorate Officer Directory</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.131/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.7.0/dist/pptxgen.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.7.1/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+</head>
+<body>
+
+    <div id="assistant-toast">
+        <span style="font-size:20px;">🤖</span>
+        <span id="toast-msg">Assistant is thinking...</span>
+    </div>
+
+    <div class="app-header">
+        <h2 id="app-title">अधिकारी निर्देशिका (जिला-फलौदी)</h2>
+        <div class="header-controls">
+            <button id="install-app-btn" class="install-btn" onclick="installPWA()" title="Install App on Phone">📲 Install App</button>
+            
+            <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+            <select id="lang-select" class="lang-select" onchange="changeLanguage()">
+                <option value="hi" selected>Hindi</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="file-section">
+        <button id="sync-btn" class="sync-btn" onclick="fetchGoogleSheet()">🔄 Refresh Data</button>
+        
+        <div class="dropdown">
+            <button id="export-dropdown-btn" class="export-dropdown-btn" onclick="toggleExportDropdown(event)">📥 Export Data ▾</button>
+            <div id="export-dropdown-content" class="dropdown-content">
+                <a href="#" onclick="exportToExcel(); return false;">📊 Save as Excel</a>
+                <a href="#" onclick="exportToPDF(); return false;">📄 Save as PDF</a>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #e9ecef;">
+        <button id="tab-district" class="tab-btn active" onclick="switchDirectoryTab('district')">
+            🏛️ District Directory
+        </button>
+        <button id="tab-office" class="tab-btn inactive" onclick="switchDirectoryTab('office')">
+            🏢 Internal Office Staff
+        </button>
+    </div>
+    <div class="slicer-section">
+        <div class="view-tabs">
+            <button id="view-all-btn" class="view-btn primary" onclick="switchView('all')">👥 All Officers</button>
+            <button id="view-starred-btn" class="view-btn" onclick="switchView('starred')">⭐ My Starred Team</button>
+            <button id="view-ai-btn" class="view-btn" onclick="switchView('ai')">🤖 AI Raj-Drafter</button>
+        </div>
+
+        <div id="normal-filters-panel">
+            <div class="analytics-board" id="analytics-board">
+                <span id="total-count-display">Total Officers: 0</span>
+                <span id="filtered-count-display">Showing: 0</span>
+                <span id="audit-count-display" style="color: #ffc107; cursor: pointer;" onclick="toggleAuditDetails()">⚠️ Quality Audit: Checking...</span>
+            </div>
+
+            <div id="audit-details-panel" class="audit-details-panel" style="display: none;">
+            </div>
+
+            <div class="search-wrapper">
+                <input type="text" id="search-bar" class="search-bar" onkeyup="applyFilters()" placeholder="Search or say a command...">
+                <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="Smart Voice Assistant">🎙️</button>
+            </div>
+            
+            <div style="text-align: left;">
+                <label id="dept-slicer-label" for="dept-slicer" style="display: block; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #333;">Select Department:</label>
+                <select id="dept-slicer" class="dept-slicer" onchange="applyFilters()">
+                    <option value="All">All Departments</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="contact-section" id="main-contact-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 8px;">
+            <h3 id="list-title" style="margin: 0; color: #333;">Officers List</h3>
+            <button id="select-all-btn" class="select-all-btn" onclick="toggleSelectAll()">☑️ Select All</button>
+        </div>
+        <div id="contact-list" class="contact-list"></div>
+    </div>
+
+    <div id="ai-drafter-workspace" class="ai-drafter-workspace">
+        <div style="border-bottom: 2px solid #6f42c1; padding-bottom: 8px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #6f42c1;">🤖 AI-Powered Bilingual Govt Document Drafter</h3>
+        </div>
+        
+        <div style="background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
+            <label style="font-weight: bold; color: #444; display:block; margin-bottom: 8px;">AI Command Prompt (Type or click mic to speak Govt Order requirements):</label>
+            <div style="position: relative; width: 100%;">
+                <textarea id="ai-prompt-input" placeholder="e.g., आगामी साप्ताहिक समीक्षा बैठक में अनुपस्थित अधिकारियों हेतु सूचना पत्र का प्रारूप तैयार करें।" style="width: 100%; height: 80px; padding: 10px 45px 10px 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; resize: none; font-family: inherit;"></textarea>
+                <button id="ai-mic-btn" onclick="startAIDrafterVoice()" title="Speak Command" style="position: absolute; right: 8px; top: 8px; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #6f42c1;">🎙️</button>
+            </div>
+
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span style="font-size: 12px; font-weight: bold; color: #777;">Quick Test Prompts:</span>
+                <button onclick="injectSamplePrompt(1)" style="font-size:12px; padding:4px 8px; background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:4px; cursor:pointer;">❌ Absent Notice Prompt</button>
+                <button onclick="injectSamplePrompt(2)" style="font-size:12px; padding:4px 8px; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:4px; cursor:pointer;">📢 General VC Meeting Order</button>
+            </div>
+            <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                <label for="ai-notice-date" style="font-size: 13px; font-weight: bold; color: #333;">📅 नोटिस/आदेश की दिनांक चुनें:</label>
+                <input type="date" id="ai-notice-date" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 10px; font-family: inherit;">
+            </div>
+
+            <button onclick="processAIDraftingEngine()" style="margin-top: 15px; width: 100%; background: linear-gradient(135deg, #6f42c1, #a855f7); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(111,66,193,0.2); transition: 0.2s;">⚙️ Generate Smart Government Layout</button>
+        </div>
+
+        <div id="ai-preview-card-frame" style="display: none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <span style="font-size:13px; font-weight:bold; color:#28a745;">✨ Live Document Preview (Click inside text to edit directly):</span>
+                <button onclick="downloadAIDraftedPDF()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">📄 Save Document A4 PDF</button>
+            </div>
+            <div style="width: 100%; overflow-x: auto; background: #eef0f3; padding: 20px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box;">
+                <div id="ai-parchment-document-canvas" contenteditable="true" style="background:#fff; color:#000; width: 210mm; min-height: 297mm; max-height: 297mm; padding: 7.5mm 25.4mm 25.4mm 25.4mm; margin: 0 auto; box-shadow:0 4px 15px rgba(0,0,0,0.15); font-family: Arial, sans-serif; line-height:1.8; font-size:15px; box-sizing:border-box; overflow:hidden; position: relative;">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="bulk-action-bar" class="bulk-action-bar">
+        <span id="selected-count" style="font-weight: bold; color: #007bff; font-size: 15px;">0 Selected</span>
+        <div style="display: flex; gap: 5px;">
+            <button class="bulk-btn sms-btn" onclick="sendBulkSMS()" style="background: #007bff; color: white; border: none; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">SMS</button>
+            <button class="bulk-btn wa-btn" onclick="sendBulkWhatsApp()" style="background: #28a745; color: white; border: none; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">WhatsApp</button>
+            <button class="bulk-btn meeting-btn" onclick="generateMeetingReport()" style="background: #6f42c1; color: white; border: none; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">📋 Meeting Drafter</button>
+        </div>
+    </div>
+
+    <div class="utility-widget collapsed" id="smart-utility-footer">
+        <div class="utility-widget-header">
+            <div>
+                <h3 style="margin:0 0 8px 0; color:#2c3e50;">🔧 Smart Document Utility</h3>
+                <p style="margin:0; color:#555; font-size:14px; max-width:680px;">Unicode से legacy Hindi fonts में बदलें और multi-page PDF से सीधे Excel Extract करें। यह toolkit पुरानी सरकारी कार्यप्रणाली के लिए designed है।</p>
+            </div>
+            <div style="display:flex; gap: 8px; flex-wrap:wrap; align-items:center;">
+                <button onclick="toggleUtilityWidget()" class="utility-widget-toggle">Open Utility ▼</button>
+                <button onclick="clearFontConverter()" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Clear Converter</button>
+            </div>
+        </div>
+        <div class="utility-widget-body">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                <div style="padding: 14px; border: 1px solid #dae0e5; border-radius: 10px; background:#f8fbff;">
+                    <h4 style="margin-top:0; color:#007bff;">Unicode → Legacy Hindi Font</h4>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+                        <select id="legacy-font-select" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;">
+                            <option value="kruti">Kruti Dev</option>
+                            <option value="devlys">DevLys010</option>
+                        </select>
+                        <button onclick="convertHindiFont()" style="background:#28a745; color:white; border:none; padding:9px 14px; border-radius:6px; cursor:pointer;">Convert</button>
+                    </div>
+                    <textarea id="unicode-input" placeholder="Paste Unicode Hindi text here..." style="width:100%; min-height:120px; padding:10px; border:1px solid #ccc; border-radius:8px; resize:vertical;"></textarea>
+                    <textarea id="legacy-output" placeholder="Legacy font output will appear here..." readonly style="width:100%; min-height:120px; margin-top:12px; padding:10px; border:1px solid #ccc; border-radius:8px; background:#f4f6f8; resize:vertical;"></textarea>
+                </div>
+                <div style="padding: 14px; border: 1px solid #dae0e5; border-radius: 10px; background:#f8fbff;">
+                    <h4 style="margin-top:0; color:#007bff; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Meeting Alerts <small id="meeting-upcoming-count" style="font-size:12px; color:#666; margin-left:8px;">(0 upcoming)</small></span>
+                        <span style="display:flex; gap:8px; align-items:center;"><button onclick="requestNotificationPermission()" style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px;">Enable Notifications</button><button onclick="clearAllReminders()" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px;">Clear All</button></span>
+                    </h4>
+                    <div style="font-size:13px; color:#555; margin-bottom:8px;">Add meeting reminders and receive browser notifications on the scheduled day/time.</div>
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <input id="meeting-title" placeholder="Meeting title" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                        <input id="meeting-date" type="date" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                        <input id="meeting-time" type="time" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    </div>
+                    <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+                        <label style="font-size:13px; color:#333;">Notify before (minutes):</label>
+                        <input id="meeting-notify-minutes" type="number" value="15" style="width:80px; padding:6px; border:1px solid #ccc; border-radius:6px;" />
+                        <button id="meeting-add-btn" style="margin-left:auto; background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Add Reminder</button>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <ul id="meeting-reminder-list" style="list-style:none; padding:0; margin:0; max-height:180px; overflow:auto;"></ul>
+                    </div>
+                </div>
+                <div style="padding: 14px; border: 1px solid #dae0e5; border-radius: 10px; background:#fff4e6;">
+                    <h4 style="margin-top:0; color:#d97706;">Office Dashboard</h4>
+                    <p style="font-size:13px; color:#555; margin-bottom:10px;">Weather, government holidays और important circulars ek jagah par manage karein.</p>
+                    <div style="display:grid; gap:12px;">
+                        <div style="padding:12px; background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;">
+                            <div style="font-weight:bold; color:#1f2937; margin-bottom:8px;">Weather</div>
+                            <div id="office-weather-display" style="font-size:13px; color:#334155; min-height:72px;">Load weather data for Phalodi.</div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                                <button onclick="fetchOfficeWeather()" style="flex:1; min-width:120px; background:#0d6efd; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Refresh Weather</button>
+                                <button onclick="setManualWeatherData()" style="flex:1; min-width:120px; background:#14b8a6; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Manual Update</button>
+                            </div>
+                            <input id="office-weather-coords" placeholder="Lat,Lon (optional)" style="width:100%; margin-top:10px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" />
+                        </div>
+                        <div style="padding:12px; background:#f8fbff; border:1px solid #e5e7eb; border-radius:10px;">
+                            <div style="font-weight:bold; color:#1f2937; margin-bottom:8px;">Govt Holidays</div>
+                            <textarea id="office-holidays-input" placeholder="हर line पर एक holiday लिखें" style="width:100%; min-height:100px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; resize:vertical;"></textarea>
+                            <button onclick="saveOfficeHolidays()" style="width:100%; margin-top:10px; background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Save Holidays</button>
+                            <ul id="office-holidays-list" style="margin-top:10px; padding-left:18px; color:#334155; font-size:13px; list-style:disc; max-height:140px; overflow:auto;"></ul>
+                        </div>
+                        <div style="padding:12px; background:#ecfdf5; border:1px solid #d1fae5; border-radius:10px;">
+                            <div style="font-weight:bold; color:#064e3b; margin-bottom:8px;">Important Circulars</div>
+                            <input id="office-circular-title" placeholder="Circular title" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:8px;" />
+                            <textarea id="office-circular-text" placeholder="Circular details" style="width:100%; min-height:80px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; resize:vertical;"></textarea>
+                            <button onclick="addOfficeCircular()" style="width:100%; margin-top:10px; background:#16a34a; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Add Circular</button>
+                            <div id="office-circulars-list" style="margin-top:10px; max-height:180px; overflow:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="back-to-top" onclick="scrollToTop()" title="Go to top">⬆️</button>
+
+    <script src="script.js?v=13"></script>
+    <!-- Meeting Modal -->
+    <div id="meeting-modal" style="display:none; position:fixed; inset:0; z-index:3000; align-items:center; justify-content:center;">
+        <div style="background:#fff; padding:18px; border-radius:10px; width:420px; max-width:94%; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+            <h3 id="meeting-modal-title" style="margin:0 0 10px 0; font-size:18px;">Add Meeting Reminder</h3>
+            <input id="modal-meeting-id" type="hidden" />
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <label style="font-size:13px; color:#333;">Title</label>
+                <input id="modal-meeting-title" type="text" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+
+                <div style="display:flex; gap:8px;">
+                    <div style="flex:1;">
+                        <label style="font-size:13px; color:#333;">Date</label>
+                        <input id="modal-meeting-date" type="date" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    </div>
+                    <div style="width:140px;">
+                        <label style="font-size:13px; color:#333;">Time</label>
+                        <input id="modal-meeting-time" type="time" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <label style="font-size:13px; color:#333; min-width:110px;">Notify before (min)</label>
+                    <input id="modal-meeting-notify" type="number" value="15" style="width:90px; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+                    <button id="modal-cancel-btn" style="background:#6c757d; color:#fff; border:none; padding:8px 12px; border-radius:6px;">Cancel</button>
+                    <button id="modal-save-btn" style="background:#2563eb; color:#fff; border:none; padding:8px 12px; border-radius:6px;">Save Reminder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="ocr-progress-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background:#fff; padding:20px 22px; border-radius:10px; width:360px; max-width:90%; text-align:left; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
+            <div style="font-weight:bold; margin-bottom:8px;">OCR in progress</div>
+            <div id="ocr-progress-msg" style="font-size:13px; color:#333; margin-bottom:10px;">Initializing OCR...</div>
+            <div style="background:#eef2ff; height:12px; border-radius:8px; overflow:hidden;">
+                <div id="ocr-progress-bar" style="height:12px; width:0%; background:linear-gradient(90deg,#2563eb,#06b6d4);"></div>
+            </div>
+            <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+                <button onclick="cancelOcrOperations()" style="background:#6c757d; color:#fff; border:none; padding:6px 10px; border-radius:6px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
