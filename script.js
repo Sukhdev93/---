@@ -9,6 +9,7 @@ let currentView = 'all';
 let isAllSelected = false;
 let progressChart = null;
 const dutyStore = new Map();
+let attendanceStatuses = JSON.parse(localStorage.getItem('attendance_statuses') || '{}');
 
 // Data Sources Map
 const DEFAULT_SHEET_URLS = {
@@ -205,6 +206,9 @@ async function fetchGoogleSheet() {
         if (titleElement) titleElement.innerText = currentDirectoryType === 'district' ? dictionary[lang].listTitle_district : dictionary[lang].listTitle_office;
         renderContacts(contacts);
         updateAnalyticsVisuals(contacts);
+        if (document.getElementById('attendance-modal')?.style.display === 'flex') {
+            openAttendanceModal();
+        }
         
     } catch (error) {
         console.error("Error fetching Google Sheet: ", error);
@@ -220,6 +224,9 @@ async function fetchGoogleSheet() {
             updateDashboard(contacts.length, contacts.length);
             renderContacts(contacts);
             updateAnalyticsVisuals(contacts);
+            if (document.getElementById('attendance-modal')?.style.display === 'flex') {
+                openAttendanceModal();
+            }
 
             alert("⚠️ Internet connection nahi hai! App Offline Mode mein pichla saved data dikha rahi hai.");
         } else {
@@ -1140,6 +1147,285 @@ function sendBulkSMS() {
     const phoneString = Array.from(selectedPhones).join(",");
     const message = "Namaskar, yeh ek jaroori suchna hai.";
     window.location.href = `sms:${phoneString}?body=${encodeURIComponent(message)}`;
+}
+
+let activeAttendanceMeeting = null;
+
+function getStoredMeetingReminders() {
+    try {
+        const raw = localStorage.getItem('meetingReminders');
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list.filter(Boolean) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function getDefaultAttendanceMeetingContext() {
+    const reminders = getStoredMeetingReminders()
+        .slice()
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    const upcoming = reminders.filter(rem => new Date(rem.datetime).getTime() >= Date.now());
+    const candidate = upcoming[0] || reminders[0];
+    if (candidate) {
+        const dt = new Date(candidate.datetime);
+        return {
+            title: candidate.title || 'बैठक',
+            date: dt.toISOString().slice(0, 10)
+        };
+    }
+
+    return {
+        title: 'बैठक',
+        date: new Date().toISOString().slice(0, 10)
+    };
+}
+
+function getAttendanceMeetingContext() {
+    if (!activeAttendanceMeeting || !activeAttendanceMeeting.title) {
+        activeAttendanceMeeting = getDefaultAttendanceMeetingContext();
+    }
+    return activeAttendanceMeeting;
+}
+
+function setAttendanceMeetingContext(title, date) {
+    const safeTitle = (title || '').trim() || 'बैठक';
+    const safeDate = (date || '').trim() || new Date().toISOString().slice(0, 10);
+    activeAttendanceMeeting = { title: safeTitle, date: safeDate };
+}
+
+function populateAttendanceMeetingSelector() {
+    const select = document.getElementById('attendance-meeting-select');
+    const dateInput = document.getElementById('attendance-meeting-date');
+    if (!select) return;
+
+    const reminders = getStoredMeetingReminders()
+        .slice()
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    const context = getAttendanceMeetingContext();
+    select.innerHTML = '';
+
+    if (reminders.length) {
+        reminders.forEach(rem => {
+            const option = document.createElement('option');
+            option.value = rem.title || 'बैठक';
+            option.textContent = rem.title || 'बैठक';
+            select.appendChild(option);
+        });
+    } else {
+        const option = document.createElement('option');
+        option.value = context.title;
+        option.textContent = context.title;
+        select.appendChild(option);
+    }
+
+    const currentTitle = context.title || 'बैठक';
+    if ([...select.options].some(opt => opt.value === currentTitle)) {
+        select.value = currentTitle;
+    } else if (select.options.length) {
+        select.value = select.options[0].value;
+    }
+
+    if (dateInput) {
+        const selectedReminder = reminders.find(rem => (rem.title || 'बैठक') === currentTitle);
+        const preferredDate = selectedReminder ? new Date(selectedReminder.datetime).toISOString().slice(0, 10) : context.date;
+        dateInput.value = preferredDate || context.date || new Date().toISOString().slice(0, 10);
+    }
+
+    select.onchange = () => {
+        const selectedTitle = select.value || context.title;
+        const selectedReminder = reminders.find(rem => (rem.title || 'बैठक') === selectedTitle);
+        const selectedDate = selectedReminder ? new Date(selectedReminder.datetime).toISOString().slice(0, 10) : (dateInput ? dateInput.value : context.date);
+        setAttendanceMeetingContext(selectedTitle, selectedDate);
+        if (dateInput) dateInput.value = selectedDate;
+        openAttendanceModal();
+    };
+
+    if (dateInput) {
+        dateInput.onchange = () => {
+            setAttendanceMeetingContext(select.value || context.title, dateInput.value);
+            openAttendanceModal();
+        };
+    }
+}
+
+function getAttendanceStorageKey(contactOrKey, context = getAttendanceMeetingContext()) {
+    const rawKey = typeof contactOrKey === 'string' ? contactOrKey : getAttendanceKey(contactOrKey);
+    const title = (context?.title || '').trim() || 'बैठक';
+    const date = (context?.date || '').trim() || new Date().toISOString().slice(0, 10);
+    return `${title}::${date}::${rawKey}`;
+}
+
+let selectedAttendanceOfficerKey = null;
+
+function selectAttendanceOfficer(key) {
+    selectedAttendanceOfficerKey = key || null;
+    openAttendanceModal();
+}
+
+function getAttendanceKey(contact) {
+    const rawPhone = contact["Mobile/Phone No."] || contact["फ़ोन नंबर"] || contact.Phone || contact.Mobile || contact.phone || '';
+    const normalized = normalizePhone(rawPhone, false);
+    const name = contact["Officer Name"] || contact["अधिकारी का नाम"] || contact.Name || contact.name || 'Unknown';
+    const dept = contact.Department || contact.विभाग || contact.dept || '';
+    const desig = contact.Designation || contact.पद || contact.designation || '';
+    return normalized || `${name}|${dept}|${desig}`;
+}
+
+function saveAttendanceState() {
+    localStorage.setItem('attendance_statuses', JSON.stringify(attendanceStatuses));
+}
+
+function setAttendanceStatus(contact, status) {
+    const context = getAttendanceMeetingContext();
+    const key = getAttendanceStorageKey(contact, context);
+    attendanceStatuses[key] = { status, updatedAt: new Date().toISOString(), meetingTitle: context.title, meetingDate: context.date };
+    saveAttendanceState();
+}
+
+function getAttendanceStatus(contact) {
+    const context = getAttendanceMeetingContext();
+    const key = getAttendanceStorageKey(contact, context);
+    return attendanceStatuses[key]?.status || 'pending';
+}
+
+function openAttendanceModal() {
+    const modal = document.getElementById('attendance-modal');
+    const body = document.getElementById('attendance-modal-body');
+    if (!modal || !body) return;
+
+    populateAttendanceMeetingSelector();
+
+    const source = Array.isArray(currentFilteredData) && currentFilteredData.length
+        ? currentFilteredData
+        : (Array.isArray(contacts) ? contacts : []);
+    body.innerHTML = '';
+
+    const listWrap = document.createElement('div');
+    listWrap.style.cssText = 'display:grid; gap:8px;';
+
+    source.forEach((contact) => {
+        const key = getAttendanceKey(contact);
+        const name = contact["Officer Name"] || contact["अधिकारी का नाम"] || contact.Name || contact.name || 'Unknown';
+        const desig = contact.Designation || contact.पद || contact.designation || '';
+        const dept = contact.Department || contact.विभाग || contact.dept || '';
+        const status = getAttendanceStatus(contact);
+
+        const row = document.createElement('div');
+        row.className = 'attendance-row';
+        row.style.cssText = 'background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; display:grid; gap:8px;';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;';
+        header.innerHTML = `
+            <div>
+                <div class="attendance-row-name">${escapeHtml(name)}</div>
+                <div class="attendance-row-meta">${escapeHtml(desig || '—')} • ${escapeHtml(dept || '—')}</div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <button type="button" class="attendance-btn" style="border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; cursor:pointer; background:#fff; font-weight:600;" onclick="event.stopPropagation(); markAttendance('${escapeHtml(key)}', 'present')">✅ Present</button>
+                <button type="button" class="attendance-btn" style="border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; cursor:pointer; background:#fff; font-weight:600;" onclick="event.stopPropagation(); markAttendance('${escapeHtml(key)}', 'absent')">❌ Absent</button>
+                <button type="button" class="attendance-btn" style="border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; cursor:pointer; background:#fff; font-weight:600;" onclick="event.stopPropagation(); markAttendance('${escapeHtml(key)}', 'pending')">⏳ Pending</button>
+            </div>
+        `;
+
+        if (status === 'present') {
+            header.querySelectorAll('.attendance-btn')[0].disabled = true;
+            header.querySelectorAll('.attendance-btn')[0].style.background = '#dbeafe';
+            header.querySelectorAll('.attendance-btn')[0].style.borderColor = '#2563eb';
+        } else if (status === 'absent') {
+            header.querySelectorAll('.attendance-btn')[1].disabled = true;
+            header.querySelectorAll('.attendance-btn')[1].style.background = '#dbeafe';
+            header.querySelectorAll('.attendance-btn')[1].style.borderColor = '#2563eb';
+        } else if (status === 'pending') {
+            header.querySelectorAll('.attendance-btn')[2].disabled = true;
+            header.querySelectorAll('.attendance-btn')[2].style.background = '#dbeafe';
+            header.querySelectorAll('.attendance-btn')[2].style.borderColor = '#2563eb';
+        }
+
+        row.appendChild(header);
+        listWrap.appendChild(row);
+    });
+
+    body.appendChild(listWrap);
+    modal.style.display = 'flex';
+}
+
+function markAttendance(key, status) {
+    const context = getAttendanceMeetingContext();
+    const storageKey = getAttendanceStorageKey(key, context);
+    const currentStatus = attendanceStatuses[storageKey]?.status || 'pending';
+
+    if (currentStatus === status) {
+        showAssistantToast(`Already marked as ${status}.`);
+        return;
+    }
+
+    attendanceStatuses[storageKey] = { status, updatedAt: new Date().toISOString(), meetingTitle: context.title, meetingDate: context.date };
+    saveAttendanceState();
+    openAttendanceModal();
+    showAssistantToast(`Attendance marked as ${status}.`);
+}
+
+function closeAttendanceModal() {
+    const modal = document.getElementById('attendance-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function exportAttendanceExcel() {
+    const source = (currentFilteredData && currentFilteredData.length) ? currentFilteredData : contacts;
+    const context = getAttendanceMeetingContext();
+    const rows = [];
+    const summary = new Map();
+
+    rows.push(['बैठक', context.title]);
+    rows.push(['तारीख', context.date]);
+    rows.push([]);
+    rows.push(['क्र.सं.', 'अधिकारी का नाम', 'पद', 'विभाग', 'स्थिति', 'दिनांक']);
+    source.forEach((contact, index) => {
+        const name = contact["Officer Name"] || contact["अधिकारी का नाम"] || contact.Name || contact.name || 'Unknown';
+        const desig = contact.Designation || contact.पद || contact.designation || '';
+        const dept = contact.Department || contact.विभाग || contact.dept || '';
+        const status = getAttendanceStatus(contact);
+        const statusText = status === 'present' ? 'Present' : status === 'absent' ? 'Absent' : 'Pending';
+        rows.push([index + 1, name, desig, dept, statusText, new Date().toLocaleDateString('hi-IN')]);
+
+        const entry = summary.get(dept || 'Unknown') || { present: 0, absent: 0, pending: 0, total: 0 };
+        entry.total += 1;
+        if (status === 'present') entry.present += 1;
+        else if (status === 'absent') entry.absent += 1;
+        else entry.pending += 1;
+        summary.set(dept || 'Unknown', entry);
+    });
+
+    const summaryRows = [['विभाग', 'Present', 'Absent', 'Pending', 'Total']];
+    summary.forEach((value, dept) => {
+        summaryRows.push([dept, value.present, value.absent, value.pending, value.total]);
+    });
+
+    if (window.XLSX && typeof window.XLSX.utils !== 'undefined') {
+        const wb = window.XLSX.utils.book_new();
+        const ws = window.XLSX.utils.aoa_to_sheet(rows);
+        const ws2 = window.XLSX.utils.aoa_to_sheet(summaryRows);
+        window.XLSX.utils.book_append_sheet(wb, ws, 'Attendance_Details');
+        window.XLSX.utils.book_append_sheet(wb, ws2, 'Attendance_Summary');
+        window.XLSX.writeFile(wb, `Officer_Attendance_${(context.title || 'Meeting').replace(/[^a-zA-Z0-9]+/g, '_')}_${context.date}.xlsx`);
+        showAssistantToast('Attendance Excel exported.');
+    } else {
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Officer_Attendance_${(context.title || 'Meeting').replace(/[^a-zA-Z0-9]+/g, '_')}_${context.date}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showAssistantToast('Attendance CSV exported (XLSX library unavailable).');
+    }
 }
 
 // ==========================================
@@ -2527,6 +2813,7 @@ window.onload = function() {
     loadTheme();
     changeLanguage();
     applySheetUrlInputs();
+    ensureMeetingModalDom();
     fetchGoogleSheet();
     loadMeetingReminders();
     scheduleAllReminders();
@@ -2535,18 +2822,18 @@ window.onload = function() {
     try {
         const addBtn = document.getElementById('meeting-add-btn');
         if (addBtn && !addBtn._bound) {
-            addBtn.addEventListener('click', function(e){ e.preventDefault(); addMeetingReminder(); });
+            addBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); addMeetingReminder(); });
             addBtn._bound = true;
         }
         // modal buttons
         const modalSave = document.getElementById('modal-save-btn');
         const modalCancel = document.getElementById('modal-cancel-btn');
         if (modalSave && !modalSave._bound) {
-            modalSave.addEventListener('click', function(e){ e.preventDefault(); saveMeetingFromModal(); });
+            modalSave.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); saveMeetingFromModal(); });
             modalSave._bound = true;
         }
         if (modalCancel && !modalCancel._bound) {
-            modalCancel.addEventListener('click', function(e){ e.preventDefault(); closeMeetingModal(); });
+            modalCancel.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); closeMeetingModal(); });
             modalCancel._bound = true;
         }
     } catch (e) { console.warn('Binding add reminder button failed', e); }
@@ -2585,21 +2872,78 @@ function addMeetingReminder() {
     openMeetingModal();
 }
 
+function ensureMeetingModalDom() {
+    let modal = document.getElementById('meeting-modal');
+    const needsModal = !modal || !document.getElementById('modal-meeting-title') || !document.getElementById('modal-meeting-venue') || !document.getElementById('modal-meeting-date') || !document.getElementById('modal-meeting-time') || !document.getElementById('modal-meeting-notify') || !document.getElementById('modal-save-btn') || !document.getElementById('modal-cancel-btn');
+
+    if (needsModal) {
+        if (modal) modal.remove();
+        modal = document.createElement('div');
+        modal.id = 'meeting-modal';
+        modal.style.cssText = 'display:none; position:fixed; inset:0; z-index:3000; align-items:center; justify-content:center; background:rgba(0,0,0,0.35);';
+        modal.innerHTML = `
+            <div style="background:#fff; padding:18px; border-radius:10px; width:420px; max-width:94%; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+                <h3 id="meeting-modal-title" style="margin:0 0 10px 0; font-size:18px;">Add Meeting Reminder</h3>
+                <input id="modal-meeting-id" type="hidden" />
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label style="font-size:13px; color:#333;">Title</label>
+                    <input id="modal-meeting-title" type="text" placeholder="उदाहरण: साप्ताहिक समीक्षा बैठक" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    <label style="font-size:13px; color:#333;">Venue</label>
+                    <input id="modal-meeting-venue" type="text" placeholder="जिला कलक्टर सभाकक्ष / VC हॉल" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    <div style="display:flex; gap:8px;">
+                        <div style="flex:1;">
+                            <label style="font-size:13px; color:#333;">Date</label>
+                            <input id="modal-meeting-date" type="date" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                        </div>
+                        <div style="width:140px;">
+                            <label style="font-size:13px; color:#333;">Time</label>
+                            <input id="modal-meeting-time" type="time" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <label style="font-size:13px; color:#333; min-width:110px;">Notify before (min)</label>
+                        <input id="modal-meeting-notify" type="number" value="15" style="width:90px; padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+                        <button id="modal-cancel-btn" type="button" style="background:#6c757d; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Cancel</button>
+                        <button id="modal-save-btn" type="button" style="background:#2563eb; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Save Reminder</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+
+    const saveBtn = document.getElementById('modal-save-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    if (saveBtn && !saveBtn._bound) {
+        saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); saveMeetingFromModal(); });
+        saveBtn._bound = true;
+    }
+    if (cancelBtn && !cancelBtn._bound) {
+        cancelBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); closeMeetingModal(); });
+        cancelBtn._bound = true;
+    }
+
+    return modal;
+}
+
 function openMeetingModal(reminder) {
     try {
-        const modal = document.getElementById('meeting-modal');
+        const modal = ensureMeetingModalDom();
         const mid = document.getElementById('modal-meeting-id');
         const title = document.getElementById('modal-meeting-title');
+        const venue = document.getElementById('modal-meeting-venue');
         const date = document.getElementById('modal-meeting-date');
         const time = document.getElementById('modal-meeting-time');
         const notify = document.getElementById('modal-meeting-notify');
         const now = new Date();
 
-        if (!modal || !title || !date || !time || !notify) return;
+        if (!modal || !title || !venue || !date || !time || !notify) return;
 
         if (reminder) {
             mid.value = reminder.id || '';
             title.value = reminder.title || '';
+            venue.value = reminder.venue || '';
             const dt = new Date(reminder.datetime);
             date.value = dt.toISOString().slice(0,10);
             time.value = dt.toTimeString().slice(0,5);
@@ -2608,6 +2952,7 @@ function openMeetingModal(reminder) {
         } else {
             mid.value = '';
             title.value = document.getElementById('meeting-title')?.value || '';
+            venue.value = '';
             date.value = document.getElementById('meeting-date')?.value || now.toISOString().slice(0,10);
             time.value = document.getElementById('meeting-time')?.value || (String(now.getHours()).padStart(2,'0') + ':' + String(Math.ceil(now.getMinutes()/5)*5).padStart(2,'0'));
             notify.value = document.getElementById('meeting-notify-minutes')?.value || 15;
@@ -2630,11 +2975,13 @@ function saveMeetingFromModal() {
     try {
         const mid = document.getElementById('modal-meeting-id');
         const titleEl = document.getElementById('modal-meeting-title');
+        const venueEl = document.getElementById('modal-meeting-venue');
         const dateEl = document.getElementById('modal-meeting-date');
         const timeEl = document.getElementById('modal-meeting-time');
         const notifyEl = document.getElementById('modal-meeting-notify');
 
         const title = (titleEl?.value || '').trim();
+        const venue = (venueEl?.value || '').trim();
         const date = dateEl?.value;
         const time = timeEl?.value;
         const notify = parseInt(notifyEl?.value || '15',10) || 15;
@@ -2653,6 +3000,7 @@ function saveMeetingFromModal() {
                 list[idx].title = title;
                 list[idx].datetime = dt.toISOString();
                 list[idx].notifyBefore = notify;
+                list[idx].venue = venue;
                 localStorage.setItem('meetingReminders', JSON.stringify(list));
                 renderMeetingReminders(list);
                 scheduleReminder(list[idx]);
@@ -2660,7 +3008,7 @@ function saveMeetingFromModal() {
             }
         } else {
             const id = 'mr-' + Date.now();
-            const reminder = { id, title, datetime: dt.toISOString(), notifyBefore: notify };
+            const reminder = { id, title, datetime: dt.toISOString(), notifyBefore: notify, venue };
             list.push(reminder);
             localStorage.setItem('meetingReminders', JSON.stringify(list));
             renderMeetingReminders(list);
@@ -2683,6 +3031,67 @@ function loadMeetingReminders() {
     return list;
 }
 
+function openVenueDirections(venue) {
+    const destination = (venue || '').trim();
+    if (!destination) {
+        showAssistantToast('Venue जानकारी नहीं मिली।');
+        return;
+    }
+
+    const destinationEncoded = encodeURIComponent(destination);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destinationEncoded}`;
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
+                const url = `${mapsUrl}&origin=${encodeURIComponent(origin)}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+                showAssistantToast('Directions opening...');
+            },
+            () => {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${destinationEncoded}`, '_blank', 'noopener,noreferrer');
+                showAssistantToast('Opening map search for venue.');
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    } else {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${destinationEncoded}`, '_blank', 'noopener,noreferrer');
+        showAssistantToast('Opening map search for venue.');
+    }
+}
+
+function renderMeetingNotice(list) {
+    const noticeContent = document.getElementById('meeting-notice-content');
+    if (!noticeContent) return;
+
+    const upcoming = (list || [])
+        .filter(rem => new Date(rem.datetime).getTime() >= Date.now())
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    if (!upcoming.length) {
+        noticeContent.innerHTML = '<div class="notice-empty">कोई आगामी बैठक निर्धारित नहीं है</div>';
+        return;
+    }
+
+    const rem = upcoming[0];
+    const dt = new Date(rem.datetime);
+    const dateOnly = dt.toLocaleDateString('hi-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeOnly = dt.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' });
+    const venue = rem.venue ? rem.venue : 'वेने्यू जोड़ें';
+
+    noticeContent.innerHTML = `
+        <div class="notice-title">${escapeHtml(rem.title || 'बैठक')}</div>
+        <div class="notice-meta">
+            <span>📅 ${dateOnly}</span>
+            <span>🕒 ${timeOnly}</span>
+        </div>
+        <div class="notice-meta">
+            <span class="venue-link" onclick="openVenueDirections(${JSON.stringify(venue)})">📍 ${escapeHtml(venue)}</span>
+        </div>
+    `;
+}
+
 function renderMeetingReminders(list) {
     const ul = document.getElementById('meeting-reminder-list');
     if (!ul) return;
@@ -2699,9 +3108,10 @@ function renderMeetingReminders(list) {
             <div style="display:flex; gap:10px; align-items:center;">
                 <div style="flex:1">
                     <div style="font-weight:700; color:#1f2937;">${escapeHtml(rem.title)}</div>
-                    <div style="font-size:13px; color:#374151; margin-top:6px; display:flex; gap:12px; align-items:center;">
+                    <div style="font-size:13px; color:#374151; margin-top:6px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                         <span style="background:#eef2ff; padding:6px 8px; border-radius:6px; font-weight:600;">Date: ${dateOnly}</span>
                         <span style="background:#fff4e6; padding:6px 8px; border-radius:6px; font-weight:600;">Time: ${timeOnly}</span>
+                        ${rem.venue ? `<span class="meeting-reminder-venue-link" onclick="openVenueDirections(${JSON.stringify(rem.venue)})">📍 ${escapeHtml(rem.venue)}</span>` : ''}
                         <span style="color:#6b7280; font-size:12px; margin-left:8px;">Notify ${rem.notifyBefore} min before</span>
                     </div>
                 </div>
@@ -2715,6 +3125,8 @@ function renderMeetingReminders(list) {
         ul.appendChild(li);
     });
     // update upcoming count
+    renderMeetingNotice(sorted);
+
     const countEl = document.getElementById('meeting-upcoming-count');
     if (countEl) {
         let txt = `(${sorted.length} upcoming)`;
