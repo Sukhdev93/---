@@ -23,7 +23,13 @@
     </div>
 
     <div class="app-header">
-        <h2 id="app-title">अधिकारी निर्देशिका (जिला-फलौदी)</h2>
+        <div class="app-brand">
+            <img src="/logo.png" alt="Rajasthan Sarkar Logo" class="rk-logo">
+            <div>
+                <h2 id="app-title">अधिकारी निर्देशिका (जिला-फलौदी)</h2>
+                <div class="brand-subtitle">राजस्थान सरकार</div>
+            </div>
+        </div>
         <div class="header-controls">
             <button id="install-app-btn" class="install-btn" onclick="installPWA()" title="Install App on Phone">📲 Install App</button>
             
@@ -32,6 +38,23 @@
                 <option value="hi" selected>Hindi</option>
                 <option value="en">English</option>
             </select>
+        </div>
+    </div>
+
+    <div class="meeting-notice-panel" aria-live="polite">
+        <div class="meeting-notice-card">
+            <div class="meeting-notice-title">📢 बैठक नोटिस</div>
+            <div id="meeting-notice-content" class="meeting-notice-content">कोई आगामी बैठक निर्धारित नहीं है</div>
+        </div>
+    </div>
+
+    <div class="attendance-panel">
+        <div class="attendance-panel-header">
+            <div>
+                <h3>📝 Online Attendance</h3>
+                <p>अधिकारी अपनी उपस्थिति mark कर सकते हैं और Excel में export कर सकते हैं।</p>
+            </div>
+            <button onclick="openAttendanceModal()" class="attendance-open-btn">Mark Attendance</button>
         </div>
     </div>
 
@@ -218,15 +241,18 @@
 
     <button id="back-to-top" onclick="scrollToTop()" title="Go to top">⬆️</button>
 
-    <script src="script.js?v=13"></script>
+    <script src="script.js?v=18"></script>
     <!-- Meeting Modal -->
-    <div id="meeting-modal" style="display:none; position:fixed; inset:0; z-index:3000; align-items:center; justify-content:center;">
+    <div id="meeting-modal" style="display:none; position:fixed; inset:0; z-index:3000; align-items:center; justify-content:center; background:rgba(0,0,0,0.35);">
         <div style="background:#fff; padding:18px; border-radius:10px; width:420px; max-width:94%; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
             <h3 id="meeting-modal-title" style="margin:0 0 10px 0; font-size:18px;">Add Meeting Reminder</h3>
             <input id="modal-meeting-id" type="hidden" />
             <div style="display:flex; flex-direction:column; gap:8px;">
                 <label style="font-size:13px; color:#333;">Title</label>
-                <input id="modal-meeting-title" type="text" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+                <input id="modal-meeting-title" type="text" placeholder="उदाहरण: साप्ताहिक समीक्षा बैठक" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
+
+                <label style="font-size:13px; color:#333;">Venue</label>
+                <input id="modal-meeting-venue" type="text" placeholder="जिला कलक्टर सभाकक्ष / VC हॉल" style="padding:8px; border:1px solid #ccc; border-radius:6px;" />
 
                 <div style="display:flex; gap:8px;">
                     <div style="flex:1;">
@@ -245,12 +271,38 @@
                 </div>
 
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
-                    <button id="modal-cancel-btn" style="background:#6c757d; color:#fff; border:none; padding:8px 12px; border-radius:6px;">Cancel</button>
-                    <button id="modal-save-btn" style="background:#2563eb; color:#fff; border:none; padding:8px 12px; border-radius:6px;">Save Reminder</button>
+                    <button id="modal-cancel-btn" type="button" style="background:#6c757d; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Cancel</button>
+                    <button id="modal-save-btn" type="button" style="background:#2563eb; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Save Reminder</button>
                 </div>
             </div>
         </div>
     </div>
+    <div id="attendance-modal" style="display:none; position:fixed; inset:0; z-index:3100; align-items:center; justify-content:center; background:rgba(0,0,0,0.45);">
+        <div style="background:#fff; width:min(900px, 96%); max-height:90vh; overflow:auto; border-radius:12px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
+                <div>
+                    <h3 style="margin:0; color:#0d6efd;">📝 Online Attendance</h3>
+                    <p style="margin:4px 0 0; font-size:13px; color:#555;">अधिकारी का Present/Absent mark करें और Excel में export करें।</p>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button onclick="exportAttendanceExcel()" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">📊 Export Excel</button>
+                    <button onclick="closeAttendanceModal()" style="background:#6c757d; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">Close</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom:12px; padding:10px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fbff;">
+                <div style="flex:1; min-width:220px;">
+                    <label for="attendance-meeting-select" style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">बैठक का नाम</label>
+                    <select id="attendance-meeting-select" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></select>
+                </div>
+                <div style="min-width:180px;">
+                    <label for="attendance-meeting-date" style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">बैठक की तिथि</label>
+                    <input id="attendance-meeting-date" type="date" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+                </div>
+            </div>
+            <div id="attendance-modal-body" style="display:grid; gap:8px;"></div>
+        </div>
+    </div>
+
     <div id="ocr-progress-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
         <div style="background:#fff; padding:20px 22px; border-radius:10px; width:360px; max-width:90%; text-align:left; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
             <div style="font-weight:bold; margin-bottom:8px;">OCR in progress</div>
