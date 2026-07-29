@@ -19,6 +19,96 @@ body {
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 10px;
+    gap: 16px;
+}
+
+.meeting-notice-panel {
+    margin-bottom: 12px;
+}
+
+.meeting-notice-card {
+    background: linear-gradient(135deg, #fff8e1, #ffe082);
+    border: 1px solid #f0b429;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.meeting-notice-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #8a4b00;
+    margin-bottom: 8px;
+}
+
+.meeting-notice-content {
+    color: #333;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.meeting-notice-content .notice-title {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.meeting-notice-content .notice-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+    color: #4b5563;
+}
+
+.meeting-notice-content .venue-link,
+.meeting-reminder-venue-link {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.meeting-notice-content .venue-link:hover,
+.meeting-reminder-venue-link:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.meeting-notice-content .notice-empty {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rk-logo {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+.app-brand h2 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.brand-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    color: #f8f9fa;
+    margin-top: 2px;
 }
 
 .header-controls button {
