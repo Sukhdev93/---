@@ -3008,7 +3008,8 @@ function saveMeetingFromModal() {
             }
         } else {
             const id = 'mr-' + Date.now();
-            const reminder = { id, title, datetime: dt.toISOString(), notifyBefore: notify, venue };
+            const createdAt = new Date().toISOString();
+            const reminder = { id, title, datetime: dt.toISOString(), notifyBefore: notify, venue, createdAt, isNew: true };
             list.push(reminder);
             localStorage.setItem('meetingReminders', JSON.stringify(list));
             renderMeetingReminders(list);
@@ -3066,7 +3067,10 @@ function renderMeetingNotice(list) {
     if (!noticeContent) return;
 
     const upcoming = (list || [])
-        .filter(rem => new Date(rem.datetime).getTime() >= Date.now())
+        .filter(rem => {
+            const ts = new Date(rem.datetime).getTime();
+            return !Number.isNaN(ts) && ts >= Date.now();
+        })
         .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
 
     if (!upcoming.length) {
@@ -3074,21 +3078,44 @@ function renderMeetingNotice(list) {
         return;
     }
 
-    const rem = upcoming[0];
-    const dt = new Date(rem.datetime);
-    const dateOnly = dt.toLocaleDateString('hi-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeOnly = dt.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' });
-    const venue = rem.venue ? rem.venue : 'वेने्यू जोड़ें';
+    const noticeItems = upcoming.map(rem => {
+        const dt = new Date(rem.datetime);
+        const dateOnly = dt.toLocaleDateString('hi-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeOnly = dt.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' });
+        const venue = rem.venue ? rem.venue : 'वेने्यू जोड़ें';
+        let createdTs = NaN;
+        if (rem.createdAt) createdTs = new Date(rem.createdAt).getTime();
+        else if (rem.id && rem.id.startsWith('mr-')) {
+            const parts = rem.id.split('-');
+            const t = parseInt(parts[1], 10);
+            if (!Number.isNaN(t)) createdTs = t;
+        }
+        const isNew = !!rem.isNew || (!Number.isNaN(createdTs) && (Date.now() - createdTs <= 7 * 24 * 60 * 60 * 1000));
+        const titleText = (rem.title || '').trim();
+        const titleIsWeekly = titleText.toLowerCase().includes('साप्ताहिक विभागीय समीक्षा बैठक'.toLowerCase());
+        const showNew = isNew || titleIsWeekly;
+
+        // debug: log title and NEW flag
+        try { console.debug('renderMeetingNotice:', { id: rem.id, title: titleText, isNew, titleIsWeekly, showNew }); } catch(e){}
+
+        return `
+            <div class="notice-item ${titleIsWeekly ? 'weekly' : ''}">
+                ${showNew ? '<span class="new-burst">NEW</span>' : ''}
+                <div class="notice-title">${escapeHtml(rem.title || 'बैठक')}</div>
+                <div class="notice-meta">
+                    <span>📅 ${dateOnly}</span>
+                    <span>🕒 ${timeOnly}</span>
+                </div>
+                <div class="notice-meta">
+                    <span class="venue-link" onclick="openVenueDirections(${JSON.stringify(venue)})">📍 ${escapeHtml(venue)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 
     noticeContent.innerHTML = `
-        <div class="notice-title">${escapeHtml(rem.title || 'बैठक')}</div>
-        <div class="notice-meta">
-            <span>📅 ${dateOnly}</span>
-            <span>🕒 ${timeOnly}</span>
-        </div>
-        <div class="notice-meta">
-            <span class="venue-link" onclick="openVenueDirections(${JSON.stringify(venue)})">📍 ${escapeHtml(venue)}</span>
-        </div>
+        <div class="important-badge">⚠️ IMPORTANT</div>
+        <div class="notice-list">${noticeItems}</div>
     `;
 }
 
